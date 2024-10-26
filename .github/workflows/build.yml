@@ -1,42 +1,33 @@
-name: CI
+name: Build Kivy APK
+
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main  # Cambia esto si quieres otro evento o rama específica
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      # Used to cache dependencies with a timeout
-      - name: Get Date
-        id: get-date
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'  # Versión compatible con Kivy
+
+      - name: Install dependencies
         run: |
-          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
-        shell: bash
+          pip install -r requirements.txt  # Si tienes un archivo de dependencias
+          pip install buildozer
 
-      - name: Cache Buildozer global directory
-        uses: actions/cache@v3  # Actualiza a v3
-        with:
-          path: .buildozer_global
-          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+      - name: Build APK with Buildozer
+        run: buildozer -v android debug  # Cambia a release si quieres un build de producción
 
-      - uses: actions/cache@v3  # Actualiza a v3
+      - name: Upload APK
+        uses: actions/upload-artifact@v2
         with:
-          path: .buildozer
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
-
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer android debug
-          buildozer_version: master
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3  # Actualiza a v3
-        with:
-          name: package
-          path: ${{ steps.buildozer.outputs.filename }}
+          name: app-debug.apk
+          path: bin/*.apk  # Cambia esto si la ruta de tu APK es diferente
